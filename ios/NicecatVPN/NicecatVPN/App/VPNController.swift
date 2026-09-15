@@ -81,7 +81,7 @@ final class VPNController: ObservableObject {
 
 private extension NETunnelProviderManager {
     static func loadAllFromPreferences() async throws -> [NETunnelProviderManager] {
-        try await withCheckedThrowingContinuation { continuation in
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<[NETunnelProviderManager], Error>) in
             NETunnelProviderManager.loadAllFromPreferences { managers, error in
                 if let error {
                     continuation.resume(throwing: error)
@@ -93,24 +93,24 @@ private extension NETunnelProviderManager {
     }
 
     func savePreferencesAsync() async throws {
-        try await withCheckedThrowingContinuation { continuation in
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
             self.saveToPreferences { error in
                 if let error {
                     continuation.resume(throwing: error)
                 } else {
-                    continuation.resume()
+                    continuation.resume(returning: ())
                 }
             }
         }
     }
 
     func loadPreferencesAsync() async throws {
-        try await withCheckedThrowingContinuation { continuation in
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
             self.loadFromPreferences { error in
                 if let error {
                     continuation.resume(throwing: error)
                 } else {
-                    continuation.resume()
+                    continuation.resume(returning: ())
                 }
             }
         }

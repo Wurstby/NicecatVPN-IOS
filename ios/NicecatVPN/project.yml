@@ -66,6 +66,7 @@ targets:
     dependencies:
       - framework: Vendor/Libbox.xcframework
         embed: false
+      - sdk: UIKit.framework
       - sdk: SystemConfiguration.framework
       - sdk: libresolv.tbd
 schemes:

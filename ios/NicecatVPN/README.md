@@ -11,15 +11,15 @@
 
 ## 重要说明
 
-安卓工程使用的是 `libbox.aar/.so`，不能直接用于 iOS。这个项目已经把 iOS 的 VPN 外壳、配置生成、签名权限和扩展目标准备好；当前 `NicecatTunnel` 在没有 iOS 版 `Libbox.xcframework` 时会启动一个不接管默认路由的占位隧道，方便先测试 UI、订阅、测速和个人签名流程。
-
-要实现真实代理流量，需要把 iOS 可用的 sing-box/Libbox 框架接到 `NicecatTunnel/PacketTunnelProvider.swift` 里的 `startSingBoxTunnel` 和 `stopSingBoxTunnel`。
+安卓工程使用的是 `libbox.aar/.so`，不能直接用于 iOS。本项目会在 GitHub Actions 里从官方 sing-box 源码构建 iOS `Libbox.xcframework`，并链接到 `NicecatTunnel` Packet Tunnel 扩展，让 sing-box 接管 iOS 的 TUN 流量。
 
 更详细的 sing-box 核心接入说明见 `SINGBOX_CORE.md`。
 
 ## GitHub Actions 无签名 IPA
 
 仓库根目录已加入 `.github/workflows/build-ios-unsigned-ipa.yml`。推送到 `main/master` 或手动运行 workflow 后，会输出 `NicecatVPN-unsigned-ipa` artifact。
+
+构建流程会先运行 `ios/NicecatVPN/scripts/build_libbox_ios.sh`，生成 `Vendor/Libbox.xcframework`，然后再运行 XcodeGen 和 `xcodebuild`。
 
 这个 IPA 是未签名包，普通真机不能直接安装。你需要再用 Xcode、AltStore、Sideloadly、iOS App Signer 或自己的证书脚本重签。重签后是否能启动 Packet Tunnel 取决于你的 Apple 账号是否允许 `packet-tunnel-provider` entitlement。
 

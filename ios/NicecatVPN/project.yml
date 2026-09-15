@@ -49,6 +49,8 @@ targets:
     platform: iOS
     sources:
       - path: NicecatTunnel/PacketTunnelProvider.swift
+      - path: NicecatTunnel/SingBoxPlatformInterface.swift
+      - path: NicecatTunnel/SingBoxRunBlocking.swift
     resources:
       - path: NicecatTunnel/Resources/rules
     info:
@@ -61,6 +63,11 @@ targets:
         PRODUCT_NAME: NicecatTunnel
         APPLICATION_EXTENSION_API_ONLY: YES
         INFOPLIST_KEY_NSHumanReadableCopyright: Wurstby
+    dependencies:
+      - framework: Vendor/Libbox.xcframework
+        embed: false
+      - sdk: SystemConfiguration.framework
+      - sdk: libresolv.tbd
 schemes:
   NicecatVPN:
     build:

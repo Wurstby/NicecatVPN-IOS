@@ -33,7 +33,11 @@ final class VPNController: ObservableObject {
         let manager = try await loadOrCreateManager()
         self.manager = manager
         try await save(manager)
+        guard let configContent = configs.first else {
+            throw VPNError.missingConfiguration
+        }
         let options: [String: NSObject] = [
+            "configContent": configContent as NSString,
             "configs": try encode(configs) as NSObject,
             "nodeNames": try encode(nodeNames) as NSObject,
             "nodeTags": try encode(nodeTags) as NSObject
@@ -76,6 +80,14 @@ final class VPNController: ObservableObject {
     private func encode(_ value: [String]) throws -> NSString {
         let data = try JSONSerialization.data(withJSONObject: value, options: [])
         return NSString(string: String(data: data, encoding: .utf8) ?? "[]")
+    }
+}
+
+private enum VPNError: LocalizedError {
+    case missingConfiguration
+
+    var errorDescription: String? {
+        "缺少 VPN 配置"
     }
 }
 

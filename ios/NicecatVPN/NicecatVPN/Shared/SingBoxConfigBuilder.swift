@@ -47,7 +47,7 @@ enum SingBoxConfigBuilder {
                 ["tag": "local", "type": "udp", "server": "223.5.5.5"]
             ],
             "rules": rules,
-            "final": "local",
+            "final": routeMode == .global ? "google" : "local",
             "strategy": "ipv4_only",
             "reverse_mapping": true
         ]
@@ -146,6 +146,7 @@ enum SingBoxConfigBuilder {
             "rules": routeRules,
             "rule_set": ruleSets,
             "final": target,
+            "auto_detect_interface": true,
             "default_domain_resolver": "local"
         ]
     }

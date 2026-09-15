@@ -11,6 +11,10 @@ if ! command -v xcodegen >/dev/null 2>&1; then
   exit 1
 fi
 
+if [ ! -d "$ROOT/Vendor/Libbox.xcframework" ]; then
+  "$ROOT/scripts/build_libbox_ios.sh"
+fi
+
 (cd "$ROOT" && xcodegen generate)
 
 xcodebuild \

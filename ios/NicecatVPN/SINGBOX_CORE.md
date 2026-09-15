@@ -1,35 +1,45 @@
 # sing-box core integration
 
-The Android app uses `libbox.aar`, which contains Android JNI and `.so` binaries. iOS cannot link that artifact. The iOS project is prepared for the equivalent Apple-side setup:
+The Android app uses `libbox.aar`, which contains Android JNI and `.so` binaries. iOS cannot link that artifact. The iOS project now builds an iOS `Libbox.xcframework` from the official sing-box source and links it into the `NicecatTunnel` Packet Tunnel extension.
 
 - Main app fetches and decrypts the subscription.
 - Main app parses node links and generates sing-box JSON.
 - Main app starts `NETunnelProviderManager`.
-- `NicecatTunnel` receives the generated configs and owns the Packet Tunnel lifecycle.
-- Real traffic forwarding should be implemented by linking an iOS `Libbox.xcframework` into the `NicecatTunnel` target.
+- `NicecatTunnel` receives the selected config as `configContent` and owns the Packet Tunnel lifecycle.
+- The extension starts sing-box with `LibboxNewCommandServer` and `startOrReloadService`.
+- The iOS platform bridge opens the Network Extension TUN file descriptor for sing-box.
 
 Upstream reference projects:
 
+- sing-box: https://github.com/SagerNet/sing-box
 - sing-box Apple client: https://github.com/SagerNet/sing-box-for-apple
 - sing-box documentation: https://sing-box.sagernet.org/
 - Apple Network Extension: https://developer.apple.com/documentation/networkextension
 
-## Current project state
+## Building the core
 
-Without `Libbox.xcframework`, the extension uses a placeholder tunnel so unsigned CI builds still succeed. This is deliberate: GitHub Actions can then always produce an unsigned IPA for UI/subscription/signing-flow testing.
+`scripts/build_libbox_ios.sh` pins sing-box to `v1.14.1` by default:
 
-## Enabling real traffic
+```bash
+cd ios/NicecatVPN
+./scripts/build_libbox_ios.sh
+```
 
-1. Build or obtain an iOS `Libbox.xcframework` that supports Packet Tunnel usage.
-2. Put it at `ios/NicecatVPN/Vendor/Libbox.xcframework`.
-3. Add this dependency to the `NicecatTunnel` target in `project.yml`:
+Override the source tag when needed:
 
-   ```yaml
-   dependencies:
-     - framework: Vendor/Libbox.xcframework
-       embed: false
-   ```
+```bash
+SING_BOX_REF=v1.14.1 ./scripts/build_libbox_ios.sh
+```
 
-4. Replace `startSingBoxTunnel` and `stopSingBoxTunnel` in `NicecatTunnel/PacketTunnelProvider.swift` with the startup/shutdown API used by your `Libbox.xcframework`.
+Then build the unsigned IPA:
 
-The generated config already includes tun inbound, urltest outbound, rule/global routing, DNS hijack rules, and local `.srs` rule-set paths.
+```bash
+cd ios/NicecatVPN
+./scripts/build_ipa.sh
+```
+
+The generated config includes tun inbound, urltest outbound, rule/global routing, DNS hijack rules, local `.srs` rule-set paths, and `route.auto_detect_interface` to avoid routing loops.
+
+## iOS signing note
+
+The unsigned IPA can be produced in CI, but installing on a physical iPhone still requires re-signing with a certificate/provisioning profile that includes the Packet Tunnel Network Extension entitlement.

@@ -4,3 +4,4 @@ DerivedData/
 *.xcarchive
 *.ipa
 *.xcresult
+Vendor/Libbox.xcframework/

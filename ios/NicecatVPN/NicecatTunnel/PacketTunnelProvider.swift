@@ -1,11 +1,19 @@
 import Foundation
 import NetworkExtension
+#if canImport(Libbox)
+import Libbox
+#endif
 
 final class PacketTunnelProvider: NEPacketTunnelProvider {
     private var configs: [String] = []
     private var nodeNames: [String] = []
     private var nodeTags: [String] = []
     private var selectedIndex = 0
+    #if canImport(Libbox)
+    private var commandServer: LibboxCommandServer?
+    private lazy var platformInterface = SingBoxPlatformInterface(tunnel: self)
+    private var activeConfig = ""
+    #endif
 
     override func startTunnel(options: [String: NSObject]?, completionHandler: @escaping (Error?) -> Void) {
         configs = decodeArray(options?["configs"]).map(normalizeRulePaths)
@@ -19,6 +27,7 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
         }
 
         #if canImport(Libbox)
+        activeConfig = (options?["configContent"] as? String).map(normalizeRulePaths) ?? configs[0]
         startSingBoxTunnel(completionHandler: completionHandler)
         #else
         startPlaceholderTunnel(completionHandler: completionHandler)
@@ -27,9 +36,13 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
 
     override func stopTunnel(with reason: NEProviderStopReason, completionHandler: @escaping () -> Void) {
         #if canImport(Libbox)
-        stopSingBoxTunnel()
-        #endif
+        Task {
+            await stopSingBoxTunnel(reason: reason)
+            completionHandler()
+        }
+        #else
         completionHandler()
+        #endif
     }
 
     override func handleAppMessage(_ messageData: Data, completionHandler: ((Data?) -> Void)?) {
@@ -54,10 +67,107 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
 
     #if canImport(Libbox)
     private func startSingBoxTunnel(completionHandler: @escaping (Error?) -> Void) {
-        completionHandler(TunnelError.libboxHookNotImplemented)
+        Task {
+            do {
+                try await startSingBoxTunnel()
+                completionHandler(nil)
+            } catch {
+                await stopSingBoxTunnel(reason: .none)
+                completionHandler(error)
+            }
+        }
     }
 
-    private func stopSingBoxTunnel() {
+    private func startSingBoxTunnel() async throws {
+        let paths = try makeRuntimePaths()
+        let options = LibboxSetupOptions()
+        options.basePath = paths.base.path
+        options.workingPath = paths.working.path
+        options.tempPath = paths.temporary.path
+        options.logMaxLines = 1000
+        options.debug = false
+        options.crashReportSource = "NetworkExtension"
+        options.appVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "1"
+        options.appMarketingVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.0.1"
+        options.platformMetadata = "{}"
+        options.oomKillerEnabled = true
+        options.powerReportEnabled = false
+
+        var setupError: NSError?
+        LibboxSetup(options, &setupError)
+        if let setupError {
+            throw TunnelError.libboxStartup("setup: \(setupError.localizedDescription)")
+        }
+
+        var serverError: NSError?
+        guard let server = LibboxNewCommandServer(platformInterface, platformInterface, &serverError) else {
+            throw TunnelError.libboxStartup(serverError?.localizedDescription ?? "无法创建命令服务")
+        }
+        commandServer = server
+
+        do {
+            try server.start()
+            try server.startOrReloadService(activeConfig, options: LibboxOverrideOptions())
+        } catch {
+            server.close()
+            commandServer = nil
+            throw TunnelError.libboxStartup(error.localizedDescription)
+        }
+    }
+
+    private func stopSingBoxTunnel(reason: NEProviderStopReason) async {
+        writeMessage("(packet-tunnel) stopping, reason: \(reason.rawValue)")
+        stopLibboxService()
+        if let server = commandServer {
+            try? await Task.sleep(nanoseconds: 100_000_000)
+            server.close()
+            commandServer = nil
+        }
+    }
+
+    func reloadLibboxService() async throws {
+        guard let commandServer else {
+            throw TunnelError.libboxStartup("命令服务未启动")
+        }
+        reasserting = true
+        defer { reasserting = false }
+        try commandServer.startOrReloadService(activeConfig, options: LibboxOverrideOptions())
+    }
+
+    func stopLibboxService() {
+        do {
+            try commandServer?.closeService()
+        } catch {
+            writeMessage("(packet-tunnel) stop service: \(error.localizedDescription)")
+        }
+        platformInterface.reset()
+    }
+
+    func writeMessage(_ message: String, level: Int32 = 3) {
+        commandServer?.writeMessage(level, message: message)
+    }
+
+    func applyTunnelNetworkSettings(_ settings: NEPacketTunnelNetworkSettings?) async throws {
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            setTunnelNetworkSettings(settings) { error in
+                if let error {
+                    continuation.resume(throwing: error)
+                } else {
+                    continuation.resume(returning: ())
+                }
+            }
+        }
+    }
+
+    private func makeRuntimePaths() throws -> (base: URL, working: URL, temporary: URL) {
+        let base = URL(fileURLWithPath: NSHomeDirectory(), isDirectory: true)
+            .appendingPathComponent("Library/Application Support/NicecatTunnel", isDirectory: true)
+        let working = base.appendingPathComponent("Working", isDirectory: true)
+        let temporary = base.appendingPathComponent("Temp", isDirectory: true)
+        for url in [base, working, temporary] {
+            try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+        }
+        return (base, working, temporary)
     }
     #endif
 
@@ -117,14 +227,14 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
 
     private enum TunnelError: LocalizedError {
         case missingConfiguration
-        case libboxHookNotImplemented
+        case libboxStartup(String)
 
         var errorDescription: String? {
             switch self {
             case .missingConfiguration:
                 return "缺少 VPN 配置"
-            case .libboxHookNotImplemented:
-                return "已检测到 Libbox，但还需要接入 iOS 版 sing-box 启动代码"
+            case let .libboxStartup(reason):
+                return "sing-box 启动失败: \(reason)"
             }
         }
     }

@@ -152,7 +152,7 @@ enum SingBoxConfigBuilder {
 
     private static func ruleSet(_ tag: String, fileName: String) -> [String: Any] {
         let path = Bundle.main.path(forResource: fileName, ofType: "srs", inDirectory: "rules") ?? "\(fileName).srs"
-        [
+        return [
             "type": "local",
             "tag": tag,
             "format": "binary",

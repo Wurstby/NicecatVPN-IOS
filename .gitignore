@@ -8,6 +8,7 @@ local.properties
 
 # Temporary extracted binaries and local probes
 tmp_aar/
+tmp_actions_logs_*/
 tmp_singbox_*/
 tmp_*.json
 build/*.bin

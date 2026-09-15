@@ -1,0 +1,73 @@
+name: NicecatVPN
+options:
+  bundleIdPrefix: com.nicecatvpn
+  createIntermediateGroups: true
+  developmentLanguage: zh-Hans
+  deploymentTarget:
+    iOS: "16.0"
+attributes:
+  ORGANIZATIONNAME: Wurstby
+settings:
+  base:
+    CURRENT_PROJECT_VERSION: 1
+    MARKETING_VERSION: 0.0.1
+    SWIFT_VERSION: 5.9
+    IPHONEOS_DEPLOYMENT_TARGET: 16.0
+    CODE_SIGN_STYLE: Automatic
+    DEVELOPMENT_TEAM: ""
+targets:
+  NicecatVPN:
+    type: application
+    platform: iOS
+    sources:
+      - path: NicecatVPN/App
+        excludes:
+          - Info.plist
+          - NicecatVPN.entitlements
+      - path: NicecatVPN/Shared
+      - path: NicecatVPN/CSecrets
+    resources:
+      - path: NicecatVPN/Resources/Assets.xcassets
+      - path: NicecatVPN/Resources/rules
+    info:
+      path: NicecatVPN/App/Info.plist
+    entitlements:
+      path: NicecatVPN/App/NicecatVPN.entitlements
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.nicecatvpn.ios
+        PRODUCT_NAME: NicecatVPN
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        INFOPLIST_KEY_NSHumanReadableCopyright: Wurstby
+        SWIFT_OBJC_BRIDGING_HEADER: NicecatVPN/CSecrets/NicecatVPN-Bridging-Header.h
+    dependencies:
+      - target: NicecatTunnel
+        embed: true
+
+  NicecatTunnel:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: NicecatTunnel/PacketTunnelProvider.swift
+    resources:
+      - path: NicecatTunnel/Resources/rules
+    info:
+      path: NicecatTunnel/Info.plist
+    entitlements:
+      path: NicecatTunnel/NicecatTunnel.entitlements
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.nicecatvpn.ios.NicecatTunnel
+        PRODUCT_NAME: NicecatTunnel
+        APPLICATION_EXTENSION_API_ONLY: YES
+        INFOPLIST_KEY_NSHumanReadableCopyright: Wurstby
+schemes:
+  NicecatVPN:
+    build:
+      targets:
+        NicecatVPN: all
+        NicecatTunnel: all
+    run:
+      config: Debug
+    archive:
+      config: Release

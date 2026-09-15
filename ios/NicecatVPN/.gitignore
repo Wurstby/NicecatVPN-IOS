@@ -1,0 +1,6 @@
+build/
+NicecatVPN.xcodeproj/
+DerivedData/
+*.xcarchive
+*.ipa
+*.xcresult

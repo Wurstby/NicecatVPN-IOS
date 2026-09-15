@@ -1,0 +1,34 @@
+# Android / Gradle
+.gradle/
+build/
+app/build/
+local.properties
+*.apk
+*.aab
+
+# Temporary extracted binaries and local probes
+tmp_aar/
+tmp_singbox_*/
+tmp_*.json
+build/*.bin
+build/*.headers
+
+# iOS / Xcode
+ios/NicecatVPN/build/
+ios/NicecatVPN/DerivedData/
+ios/NicecatVPN/NicecatVPN.xcodeproj/
+*.xcarchive
+*.xcresult
+*.ipa
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Local git metadata backups
+_git_backups/

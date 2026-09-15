@@ -89,7 +89,6 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
         options.crashReportSource = "NetworkExtension"
         options.appVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "1"
         options.appMarketingVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.0.1"
-        options.platformMetadata = "{}"
         options.oomKillerEnabled = true
         options.powerReportEnabled = false
 

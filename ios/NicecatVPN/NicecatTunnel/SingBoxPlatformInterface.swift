@@ -8,7 +8,7 @@ import UserNotifications
 final class SingBoxPlatformInterface: NSObject, LibboxPlatformInterfaceProtocol, LibboxCommandServerHandlerProtocol {
     private let tunnel: PacketTunnelProvider
     private var networkSettings: NEPacketTunnelNetworkSettings?
-    private var nwMonitor: NWPathMonitor?
+    private var nwMonitor: Network.NWPathMonitor?
     private var lastNetworkPath: String?
 
     init(tunnel: PacketTunnelProvider) {
@@ -188,7 +188,7 @@ final class SingBoxPlatformInterface: NSObject, LibboxPlatformInterfaceProtocol,
 
     func startDefaultInterfaceMonitor(_ listener: LibboxInterfaceUpdateListenerProtocol?) throws {
         guard let listener else { return }
-        let monitor = NWPathMonitor()
+        let monitor = Network.NWPathMonitor()
         nwMonitor = monitor
         let semaphore = DispatchSemaphore(value: 0)
         monitor.pathUpdateHandler = { [weak self] path in
@@ -394,19 +394,11 @@ final class SingBoxPlatformInterface: NSObject, LibboxPlatformInterfaceProtocol,
         throw makeError("Bridge mode is not supported on iOS")
     }
 
-    func usePlatformAutoRedirect() -> Bool {
-        false
-    }
-
-    func createAutoRedirect(_: Data?, handler _: (any LibboxAutoRedirectHandlerProtocol)?) throws -> any LibboxAutoRedirectSessionProtocol {
-        throw makeError("Auto redirect is not supported on iOS")
-    }
-
     func lookupUser(_ username: String?) throws -> LibboxPlatformUser {
         throw makeError("User lookup is not supported on iOS")
     }
 
-    private func onUpdateDefaultInterface(_ listener: LibboxInterfaceUpdateListenerProtocol, _ path: NWPath) {
+    private func onUpdateDefaultInterface(_ listener: LibboxInterfaceUpdateListenerProtocol, _ path: Network.NWPath) {
         let networkPath = describeNetworkPath(path)
         listener.updateNetworkPath(networkPath)
         guard networkPath != lastNetworkPath else {
@@ -420,7 +412,7 @@ final class SingBoxPlatformInterface: NSObject, LibboxPlatformInterfaceProtocol,
         listener.updateDefaultInterface(defaultInterface.name, interfaceIndex: Int32(defaultInterface.index), isExpensive: path.isExpensive, isConstrained: path.isConstrained)
     }
 
-    private func describeNetworkPath(_ path: NWPath) -> String {
+    private func describeNetworkPath(_ path: Network.NWPath) -> String {
         var parts: [String] = []
         switch path.status {
         case .satisfied:
